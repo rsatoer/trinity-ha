@@ -128,7 +128,7 @@ def _werk_apparaat_bij(hass: HomeAssistant, tablet: Tablet) -> None:
             entry, title=tablet.naam, data={**entry.data, CONF_NAAM: tablet.naam}
         )
     register = dr.async_get(hass)
-    apparaat = register.async_get_device(identifiers={(DOMAIN, tablet.tablet_id)})
+    apparaat = _zoek_apparaat(register, tablet.tablet_id, entry.entry_id)
     if apparaat is not None:
         register.async_update_device(
             apparaat.id,
@@ -137,3 +137,11 @@ def _werk_apparaat_bij(hass: HomeAssistant, tablet: Tablet) -> None:
             model=tablet.model,
             sw_version=tablet.app_versie,
         )
+
+
+def _zoek_apparaat(register: dr.DeviceRegistry, tablet_id: str, entry_id: str) -> dr.DeviceEntry | None:
+    """Het apparaat van een tablet. Sinds HA 2026.8 zoek je binnen de config entry."""
+    zoek = getattr(register, "async_get_device_by_identifier", None)
+    if zoek is not None:
+        return zoek((DOMAIN, tablet_id), entry_id)
+    return register.async_get_device(identifiers={(DOMAIN, tablet_id)})

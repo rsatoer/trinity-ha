@@ -58,6 +58,14 @@ def _ontdekt(hass: HomeAssistant) -> list[dict]:
     ]
 
 
+def _apparaat(hass: HomeAssistant) -> dr.DeviceEntry:
+    """Het apparaat van de tablet, via een van zijn entities."""
+    entity = er.async_get(hass).async_get(_entity(hass, "switch", "scherm"))
+    apparaat = dr.async_get(hass).async_get(entity.device_id)
+    assert apparaat is not None
+    return apparaat
+
+
 def _entity(hass: HomeAssistant, platform: str, sleutel: str) -> str:
     entity_id = er.async_get(hass).async_get_entity_id(platform, DOMAIN, f"abc-123_{sleutel}")
     assert entity_id, f"{platform} {sleutel} ontbreekt"
@@ -127,8 +135,8 @@ async def test_staat_en_opdrachten(hass: HomeAssistant, hass_ws_client) -> None:
     assert hass.states.get(_entity(hass, "sensor", "opgestart")).state.startswith("2025-11-26T")
     assert hass.states.get(_entity(hass, "sensor", "app_versie")).state == "0.0.30-test"
 
-    apparaat = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, "abc-123")})
-    assert apparaat is not None
+    apparaat = _apparaat(hass)
+    assert (DOMAIN, "abc-123") in apparaat.identifiers
     assert apparaat.name == "Wandpaneel"
     assert apparaat.model == "OPD2480"
 
@@ -155,8 +163,7 @@ async def test_staat_en_opdrachten(hass: HomeAssistant, hass_ws_client) -> None:
     await client.send_json({"id": 3, "type": "trinity/staat", "tablet_id": "abc-123", "staat": {**STAAT, "naam": "Keuken"}})
     assert (await client.receive_json())["success"]
     await hass.async_block_till_done()
-    apparaat = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, "abc-123")})
-    assert apparaat.name == "Keuken"
+    assert _apparaat(hass).name == "Keuken"
     assert hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, "abc-123").title == "Keuken"
 
     # Verbinding weg: entities niet beschikbaar.
