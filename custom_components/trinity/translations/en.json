@@ -1,0 +1,119 @@
+{
+  "config": {
+    "flow_title": "{naam}",
+    "step": {
+      "user": {
+        "title": "Trinity",
+        "description": "Adds Trinity to Home Assistant. Tablets with the Trinity app that are logged in to this Home Assistant then announce themselves and appear under Discovered."
+      },
+      "bevestig": {
+        "title": "Pair {naam}",
+        "description": "Enter the pairing code shown on the tablet (Settings › Advanced › Integration, or in the notification).",
+        "data": {
+          "code": "Pairing code"
+        },
+        "data_description": {
+          "code": "Six digits, for example 483 921."
+        }
+      }
+    },
+    "error": {
+      "code_onjuist": "That code does not match. Check the code on the tablet.",
+      "tablet_weg": "The tablet is no longer connected. Open Trinity on the tablet and try again."
+    },
+    "abort": {
+      "already_configured": "This tablet (or Trinity itself) has already been added."
+    }
+  },
+  "entity": {
+    "switch": {
+      "scherm": {
+        "name": "Screen"
+      }
+    },
+    "number": {
+      "helderheid": {
+        "name": "Brightness"
+      }
+    },
+    "select": {
+      "pagina": {
+        "name": "Page"
+      }
+    },
+    "binary_sensor": {
+      "laden": {
+        "name": "Charging"
+      }
+    },
+    "sensor": {
+      "rol": {
+        "name": "Role",
+        "state": {
+          "kiosk": "Wall panel",
+          "achtergrond": "Background",
+          "smartspeaker": "Smart speaker"
+        }
+      },
+      "lux": {
+        "name": "Illuminance"
+      },
+      "batterij": {
+        "name": "Battery"
+      },
+      "android": {
+        "name": "Android version"
+      },
+      "beveiligingspatch": {
+        "name": "Security patch"
+      },
+      "opgestart": {
+        "name": "Last restart"
+      },
+      "app_versie": {
+        "name": "App version"
+      }
+    }
+  },
+  "services": {
+    "toon_pagina": {
+      "name": "Show page",
+      "description": "Shows a page on a Trinity tablet; the rotation continues from there.",
+      "fields": {
+        "tablet": {
+          "name": "Tablet",
+          "description": "The Trinity tablet."
+        },
+        "pagina": {
+          "name": "Page",
+          "description": "Name or id of the page, as in the Trinity app."
+        }
+      }
+    },
+    "herlaad_pagina": {
+      "name": "Reload page",
+      "description": "Reloads a page on a Trinity tablet.",
+      "fields": {
+        "tablet": {
+          "name": "Tablet",
+          "description": "The Trinity tablet."
+        },
+        "pagina": {
+          "name": "Page",
+          "description": "Name or id of the page; empty for the page that is shown now."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "niet_verbonden": {
+      "message": "{naam} is not connected to Home Assistant right now."
+    },
+    "onbekende_tablet": {
+      "message": "That device is not a Trinity tablet."
+    },
+    "onbekende_pagina": {
+      "message": "{naam} has no page \"{pagina}\"."
+    }
+  }
+}

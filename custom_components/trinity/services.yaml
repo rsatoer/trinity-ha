@@ -1,0 +1,24 @@
+toon_pagina:
+  fields:
+    tablet:
+      required: true
+      selector:
+        device:
+          integration: trinity
+    pagina:
+      required: true
+      example: "nu.nl"
+      selector:
+        text:
+
+herlaad_pagina:
+  fields:
+    tablet:
+      required: true
+      selector:
+        device:
+          integration: trinity
+    pagina:
+      required: false
+      selector:
+        text:
