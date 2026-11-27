@@ -146,12 +146,12 @@ async def test_staat_en_opdrachten(hass: HomeAssistant, hass_ws_client) -> None:
     assert apparaat.model == "OPD2480"
 
     # Camera ziet beweging; daarna de module uit: de camera-entities zijn dan niet beschikbaar.
-    await client.send_json({"id": 10, "type": "trinity/staat", "tablet_id": "abc-123",
+    await client.send_json({"id": 3, "type": "trinity/staat", "tablet_id": "abc-123",
                             "staat": {**STAAT, "camera": {"aan": True, "actief": True, "beweging": True}}})
     assert (await client.receive_json())["success"]
     await hass.async_block_till_done()
     assert hass.states.get(beweging).state == "on"
-    await client.send_json({"id": 11, "type": "trinity/staat", "tablet_id": "abc-123",
+    await client.send_json({"id": 4, "type": "trinity/staat", "tablet_id": "abc-123",
                             "staat": {**STAAT, "camera": {"aan": False, "actief": False, "beweging": False}}})
     assert (await client.receive_json())["success"]
     await hass.async_block_till_done()
@@ -178,7 +178,7 @@ async def test_staat_en_opdrachten(hass: HomeAssistant, hass_ws_client) -> None:
         await hass.services.async_call(DOMAIN, "toon_pagina", {"tablet": apparaat.id, "pagina": "bestaat niet"}, blocking=True)
 
     # Nieuwe naam op de tablet: apparaat en koppeling volgen.
-    await client.send_json({"id": 3, "type": "trinity/staat", "tablet_id": "abc-123", "staat": {**STAAT, "naam": "Keuken"}})
+    await client.send_json({"id": 5, "type": "trinity/staat", "tablet_id": "abc-123", "staat": {**STAAT, "naam": "Keuken"}})
     assert (await client.receive_json())["success"]
     await hass.async_block_till_done()
     assert _apparaat(hass).name == "Keuken"
