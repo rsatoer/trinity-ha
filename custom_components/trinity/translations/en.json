@@ -22,13 +22,17 @@
       "tablet_weg": "The tablet is no longer connected. Open Trinity on the tablet and try again."
     },
     "abort": {
-      "already_configured": "This tablet (or Trinity itself) has already been added."
+      "already_configured": "This tablet has already been paired.",
+      "hub_bestaat": "Trinity has already been added. Tablets with the Trinity app appear under Discovered by themselves; pair them there with the code on the tablet."
     }
   },
   "entity": {
     "switch": {
       "scherm": {
         "name": "Screen"
+      },
+      "wekken": {
+        "name": "Wake on motion"
       }
     },
     "number": {
@@ -50,6 +54,14 @@
       },
       "camera_actief": {
         "name": "Camera active"
+      },
+      "stream_actief": {
+        "name": "Stream watched",
+        "state_attributes": {
+          "kijkers": {
+            "name": "Viewers"
+          }
+        }
       }
     },
     "sensor": {
@@ -78,6 +90,11 @@
       },
       "app_versie": {
         "name": "App version"
+      }
+    },
+    "camera": {
+      "camera": {
+        "name": "Camera"
       }
     }
   },

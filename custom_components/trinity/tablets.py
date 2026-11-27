@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 import secrets
+import time
 from typing import Any
 
 from homeassistant.components import websocket_api
@@ -28,6 +30,10 @@ class Tablet:
     code: str | None = None
     verbinding: websocket_api.ActiveConnection | None = None
     abonnement: int | None = None
+    # Momentopnamen: openstaande verzoeken en de laatste foto.
+    fotos: dict[str, asyncio.Future[bytes | None]] = field(default_factory=dict)
+    laatste_foto: bytes | None = None
+    laatste_foto_tijd: float = 0.0
 
     @property
     def verbonden(self) -> bool:
@@ -43,6 +49,46 @@ class Tablet:
             websocket_api.event_message(self.abonnement, {"opdracht": opdracht, **gegevens})
         )
         return True
+
+    async def foto(self, hass: HomeAssistant, wacht: float = 10.0) -> bytes | None:
+        """Een momentopname van de camera van de tablet.
+
+        Een foto van minder dan vijf seconden oud gaat opnieuw mee: een dashboard vraagt er
+        vaak om, en elke nieuwe zet de camera van de tablet even aan. Lukt het niet, dan de
+        laatste foto (of None).
+        """
+        if self.laatste_foto is not None and time.monotonic() - self.laatste_foto_tijd < 5:
+            return self.laatste_foto
+        lopend = next((f for f in self.fotos.values() if not f.done()), None)
+        if lopend is not None:
+            try:
+                async with asyncio.timeout(wacht):
+                    return await asyncio.shield(lopend) or self.laatste_foto
+            except TimeoutError:
+                return self.laatste_foto
+        verzoek = secrets.token_hex(8)
+        toekomst: asyncio.Future[bytes | None] = hass.loop.create_future()
+        self.fotos[verzoek] = toekomst
+        try:
+            if not self.stuur("foto", verzoek=verzoek):
+                return self.laatste_foto
+            async with asyncio.timeout(wacht):
+                return await asyncio.shield(toekomst) or self.laatste_foto
+        except TimeoutError:
+            return self.laatste_foto
+        finally:
+            self.fotos.pop(verzoek, None)
+            if not toekomst.done():
+                toekomst.set_result(None)
+
+    @callback
+    def foto_ontvangen(self, verzoek: str, jpeg: bytes) -> None:
+        """De tablet stuurt een foto terug."""
+        self.laatste_foto = jpeg
+        self.laatste_foto_tijd = time.monotonic()
+        toekomst = self.fotos.get(verzoek)
+        if toekomst is not None and not toekomst.done():
+            toekomst.set_result(jpeg)
 
     def maak_code(self) -> str:
         """Een nieuwe zescijferige koppelcode."""

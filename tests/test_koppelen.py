@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import base64
+
 import pytest
 
 from homeassistant import config_entries
+from homeassistant.components import camera
+from homeassistant.components.camera import CameraEntityFeature
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import ServiceValidationError
@@ -31,7 +35,9 @@ STAAT = {
     "lux": 120,
     "batterij": 85,
     "laden": True,
+    "wekken": True,
     "camera": {"aan": True, "actief": True, "beweging": False},
+    "stream": {"aan": False},
     "systeem": {
         "android": "16",
         "patch": "2026-10-01",
@@ -109,7 +115,7 @@ async def test_hub_maar_een_keer(hass: HomeAssistant) -> None:
     await _hub(hass)
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
     assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "already_configured"
+    assert result["reason"] == "hub_bestaat"
 
 
 async def test_staat_en_opdrachten(hass: HomeAssistant, hass_ws_client) -> None:
@@ -222,3 +228,90 @@ async def test_staat_van_onbekende_tablet(hass: HomeAssistant, hass_ws_client) -
     msg = await client.receive_json()
     assert not msg["success"]
     assert msg["error"]["code"] == "not_found"
+
+
+async def _staat(client, nummer: int, staat: dict) -> None:
+    await client.send_json({"id": nummer, "type": "trinity/staat", "tablet_id": "abc-123", "staat": staat})
+    assert (await client.receive_json())["success"]
+
+
+async def test_wekken(hass: HomeAssistant, hass_ws_client) -> None:
+    client, _ = await _koppel(hass, hass_ws_client)
+    await _staat(client, 2, STAAT)
+    await hass.async_block_till_done()
+
+    wekken = _entity(hass, "switch", "wekken")
+    assert hass.states.get(wekken).state == "on"
+    await hass.services.async_call("switch", "turn_off", {"entity_id": wekken}, blocking=True)
+    assert (await client.receive_json())["event"] == {"opdracht": "wekken", "aan": False}
+
+    # Een oudere app zonder deze schakelaar: niet beschikbaar.
+    zonder = {k: v for k, v in STAAT.items() if k != "wekken"}
+    await _staat(client, 3, zonder)
+    await hass.async_block_till_done()
+    assert hass.states.get(wekken).state == "unavailable"
+
+
+async def test_camera_stream_en_foto(hass: HomeAssistant, hass_ws_client) -> None:
+    client, _ = await _koppel(hass, hass_ws_client)
+    stream = {
+        "aan": True,
+        "adres": "192.168.1.50",
+        "poort": 8554,
+        "pad": "trinity",
+        "gebruiker": "trinity",
+        "wachtwoord": "ge/heim+",
+        "kijkers": 0,
+    }
+    await _staat(client, 2, {**STAAT, "stream": stream})
+    await hass.async_block_till_done()
+
+    cam = _entity(hass, "camera", "camera")
+    toestand = hass.states.get(cam)
+    assert toestand.state == "idle"
+    assert toestand.attributes["supported_features"] == CameraEntityFeature.STREAM
+    assert await camera.async_get_stream_source(hass, cam) == "rtsp://trinity:ge%2Fheim%2B@192.168.1.50:8554/trinity"
+    bekeken = _entity(hass, "binary_sensor", "stream_actief")
+    assert hass.states.get(bekeken).state == "off"
+
+    # Momentopname: HA vraagt, de tablet antwoordt over dezelfde verbinding.
+    taak = hass.async_create_task(camera.async_get_image(hass, cam))
+    msg = await client.receive_json()
+    assert msg["event"]["opdracht"] == "foto"
+    jpeg = b"\xff\xd8\xff\xe0nep\xff\xd9"
+    await client.send_json(
+        {
+            "id": 3,
+            "type": "trinity/foto",
+            "tablet_id": "abc-123",
+            "verzoek": msg["event"]["verzoek"],
+            "jpeg": base64.b64encode(jpeg).decode(),
+        }
+    )
+    assert (await client.receive_json())["success"]
+    assert (await taak).content == jpeg
+    # Kort daarna dezelfde foto, zonder de tablet opnieuw te vragen.
+    assert (await camera.async_get_image(hass, cam)).content == jpeg
+
+    # Een andere verbinding mag geen foto voor deze tablet sturen.
+    ander = await hass_ws_client(hass)
+    await ander.send_json({"id": 1, "type": "trinity/foto", "tablet_id": "abc-123", "verzoek": "x", "jpeg": ""})
+    assert not (await ander.receive_json())["success"]
+
+    # Iemand kijkt.
+    await _staat(client, 4, {**STAAT, "stream": {**stream, "kijkers": 1}})
+    await hass.async_block_till_done()
+    assert hass.states.get(bekeken).state == "on"
+    assert hass.states.get(cam).state == "streaming"
+
+    # Stream uit: geen live beeld, wel de camera voor foto's.
+    await _staat(client, 5, STAAT)
+    await hass.async_block_till_done()
+    assert hass.states.get(cam).attributes["supported_features"] == 0
+    assert await camera.async_get_stream_source(hass, cam) is None
+    assert hass.states.get(bekeken).state == "unavailable"
+
+    # Module camera uit: niet beschikbaar.
+    await _staat(client, 6, {**STAAT, "camera": {"aan": False, "actief": False, "beweging": False}})
+    await hass.async_block_till_done()
+    assert hass.states.get(cam).state == "unavailable"
