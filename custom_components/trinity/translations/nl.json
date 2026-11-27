@@ -44,6 +44,12 @@
     "binary_sensor": {
       "laden": {
         "name": "Laden"
+      },
+      "camerabeweging": {
+        "name": "Camerabeweging"
+      },
+      "camera_actief": {
+        "name": "Camera actief"
       }
     },
     "sensor": {

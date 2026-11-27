@@ -44,6 +44,12 @@
     "binary_sensor": {
       "laden": {
         "name": "Charging"
+      },
+      "camerabeweging": {
+        "name": "Camera motion"
+      },
+      "camera_actief": {
+        "name": "Camera active"
       }
     },
     "sensor": {

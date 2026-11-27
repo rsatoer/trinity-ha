@@ -28,6 +28,8 @@ De tablet heeft al een ingelogde verbinding met Home Assistant (voor de beweging
 | Lichtsterkte | sensor | De lichtsensor van de tablet (lux) |
 | Batterij | sensor | Batterijpercentage |
 | Laden | binary_sensor | Of de tablet laadt |
+| Camerabeweging | binary_sensor | Beweging gezien door de camera van de tablet (boven de melddrempel). Alleen als de camera op de tablet aan staat. |
+| Camera actief | binary_sensor (diagnose) | Of de camera nu kijkt (standaard alleen met het scherm uit of gedimd) |
 | Android-versie, Beveiligingspatch, Laatste herstart, App-versie | sensor (diagnose) | Systeeminformatie, bijvoorbeeld voor een melding na een herstart |
 
 ### Acties
