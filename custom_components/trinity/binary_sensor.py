@@ -1,4 +1,4 @@
-"""Binaire sensoren: laden, en de camera van de tablet."""
+"""Binaire sensoren: laden, en de camera en stream van de tablet."""
 
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ async def async_setup_entry(
             Laden(tablet, "laden"),
             Camerabeweging(tablet, "camerabeweging"),
             CameraActief(tablet, "camera_actief"),
+            StreamActief(tablet, "stream_actief"),
         ]
     )
 
@@ -54,7 +55,7 @@ class Camerabeweging(_CameraEntity, BinarySensorEntity):
 
 
 class CameraActief(_CameraEntity, BinarySensorEntity):
-    """Kijkt de camera nu? (Standaard alleen met het scherm uit of gedimd.)"""
+    """Staat de camera nu aan? Om te kijken (standaard met het scherm uit), voor de stream of een foto."""
 
     _attr_device_class = BinarySensorDeviceClass.RUNNING
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -62,3 +63,25 @@ class CameraActief(_CameraEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool | None:
         return self.camera().get("actief")
+
+
+class StreamActief(_CameraEntity, BinarySensorEntity):
+    """Kijkt er nu iemand naar de stream (HA zelf, Frigate, VLC)? Alleen als de stream aan staat."""
+
+    _attr_device_class = BinarySensorDeviceClass.RUNNING
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def stream(self) -> dict:
+        return self.staat("stream") or {}
+
+    @property
+    def available(self) -> bool:
+        return super().available and bool(self.stream().get("aan"))
+
+    @property
+    def is_on(self) -> bool | None:
+        return bool(self.stream().get("kijkers"))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, int]:
+        return {"kijkers": int(self.stream().get("kijkers") or 0)}

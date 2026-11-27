@@ -3,6 +3,12 @@
     "switch": {
       "scherm": {
         "default": "mdi:tablet"
+      },
+      "wekken": {
+        "default": "mdi:motion-sensor",
+        "state": {
+          "off": "mdi:motion-sensor-off"
+        }
       }
     },
     "number": {
@@ -37,6 +43,12 @@
         "default": "mdi:cctv",
         "state": {
           "off": "mdi:cctv-off"
+        }
+      },
+      "stream_actief": {
+        "default": "mdi:video-wireless-outline",
+        "state": {
+          "on": "mdi:video-wireless"
         }
       }
     }

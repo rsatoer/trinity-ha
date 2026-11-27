@@ -27,7 +27,7 @@ class TrinityConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """De integratie toevoegen: daarna kunnen tablets zich melden."""
         await self.async_set_unique_id(HUB_ID)
-        self._abort_if_unique_id_configured()
+        self._abort_if_unique_id_configured(error="hub_bestaat")
         if user_input is not None:
             return self.async_create_entry(title="Trinity", data={SOORT: SOORT_HUB})
         return self.async_show_form(step_id="user")

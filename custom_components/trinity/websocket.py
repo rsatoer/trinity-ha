@@ -6,10 +6,13 @@ De tablet heeft al een ingelogde verbinding met HA (voor de bewegingssensoren). 
   niet, welke code hij moet tonen. Zolang het abonnement loopt, stuurt de integratie
   hierover opdrachten (scherm, helderheid, pagina).
 - ``trinity/staat``: de actuele staat van de tablet, voor de entities.
+- ``trinity/foto``: een momentopname (JPEG, base64) als antwoord op de opdracht ``foto``.
 """
 
 from __future__ import annotations
 
+import base64
+import binascii
 from typing import Any
 
 import voluptuous as vol
@@ -28,6 +31,7 @@ def async_registreer(hass: HomeAssistant) -> None:
     """Registreer de opdrachten (één keer, als de integratie laadt)."""
     websocket_api.async_register_command(hass, ws_verbind)
     websocket_api.async_register_command(hass, ws_staat)
+    websocket_api.async_register_command(hass, ws_foto)
 
 
 @callback
@@ -114,6 +118,33 @@ def ws_staat(
         _werk_apparaat_bij(hass, tablet)
     connection.send_result(msg["id"])
     tablets.meld(tablet)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "trinity/foto",
+        vol.Required("tablet_id"): str,
+        vol.Required("verzoek"): str,
+        vol.Required("jpeg"): str,
+    }
+)
+@callback
+def ws_foto(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """De tablet stuurt een momentopname. Alleen over de eigen verbinding van die tablet."""
+    tablets: Tablets = hass.data[DOMAIN]
+    tablet = tablets.get(msg["tablet_id"])
+    if tablet is None or tablet.verbinding is not connection:
+        connection.send_error(msg["id"], "not_found", "Tablet is niet via deze verbinding gemeld")
+        return
+    try:
+        jpeg = base64.b64decode(msg["jpeg"], validate=True)
+    except (binascii.Error, ValueError):
+        connection.send_error(msg["id"], "invalid_format", "Geen geldige base64")
+        return
+    tablet.foto_ontvangen(msg["verzoek"], jpeg)
+    connection.send_result(msg["id"])
 
 
 @callback
