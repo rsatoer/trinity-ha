@@ -31,6 +31,7 @@ STAAT = {
     "lux": 120,
     "batterij": 85,
     "laden": True,
+    "camera": {"aan": True, "actief": True, "beweging": False},
     "systeem": {
         "android": "16",
         "patch": "2026-10-01",
@@ -134,11 +135,28 @@ async def test_staat_en_opdrachten(hass: HomeAssistant, hass_ws_client) -> None:
     assert hass.states.get(_entity(hass, "sensor", "beveiligingspatch")).state == "2026-10-01"
     assert hass.states.get(_entity(hass, "sensor", "opgestart")).state.startswith("2025-11-26T")
     assert hass.states.get(_entity(hass, "sensor", "app_versie")).state == "0.0.30-test"
+    beweging = _entity(hass, "binary_sensor", "camerabeweging")
+    actief = _entity(hass, "binary_sensor", "camera_actief")
+    assert hass.states.get(beweging).state == "off"
+    assert hass.states.get(actief).state == "on"
 
     apparaat = _apparaat(hass)
     assert (DOMAIN, "abc-123") in apparaat.identifiers
     assert apparaat.name == "Wandpaneel"
     assert apparaat.model == "OPD2480"
+
+    # Camera ziet beweging; daarna de module uit: de camera-entities zijn dan niet beschikbaar.
+    await client.send_json({"id": 10, "type": "trinity/staat", "tablet_id": "abc-123",
+                            "staat": {**STAAT, "camera": {"aan": True, "actief": True, "beweging": True}}})
+    assert (await client.receive_json())["success"]
+    await hass.async_block_till_done()
+    assert hass.states.get(beweging).state == "on"
+    await client.send_json({"id": 11, "type": "trinity/staat", "tablet_id": "abc-123",
+                            "staat": {**STAAT, "camera": {"aan": False, "actief": False, "beweging": False}}})
+    assert (await client.receive_json())["success"]
+    await hass.async_block_till_done()
+    assert hass.states.get(beweging).state == "unavailable"
+    assert hass.states.get(actief).state == "unavailable"
 
     # Opdrachten van HA naar de tablet.
     await hass.services.async_call("switch", "turn_off", {"entity_id": schakelaar}, blocking=True)

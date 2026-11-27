@@ -1,24 +1,52 @@
 {
   "entity": {
     "switch": {
-      "scherm": { "default": "mdi:tablet" }
+      "scherm": {
+        "default": "mdi:tablet"
+      }
     },
     "number": {
-      "helderheid": { "default": "mdi:brightness-6" }
+      "helderheid": {
+        "default": "mdi:brightness-6"
+      }
     },
     "select": {
-      "pagina": { "default": "mdi:page-next-outline" }
+      "pagina": {
+        "default": "mdi:page-next-outline"
+      }
     },
     "sensor": {
-      "rol": { "default": "mdi:tablet-dashboard" },
-      "android": { "default": "mdi:android" },
-      "beveiligingspatch": { "default": "mdi:shield-check" },
-      "opgestart": { "default": "mdi:restart" },
-      "app_versie": { "default": "mdi:information-outline" }
+      "rol": {
+        "default": "mdi:tablet-dashboard"
+      },
+      "android": {
+        "default": "mdi:android"
+      },
+      "beveiligingspatch": {
+        "default": "mdi:shield-check"
+      },
+      "opgestart": {
+        "default": "mdi:restart"
+      },
+      "app_versie": {
+        "default": "mdi:information-outline"
+      }
+    },
+    "binary_sensor": {
+      "camera_actief": {
+        "default": "mdi:cctv",
+        "state": {
+          "off": "mdi:cctv-off"
+        }
+      }
     }
   },
   "services": {
-    "toon_pagina": { "service": "mdi:page-next" },
-    "herlaad_pagina": { "service": "mdi:refresh" }
+    "toon_pagina": {
+      "service": "mdi:page-next"
+    },
+    "herlaad_pagina": {
+      "service": "mdi:refresh"
+    }
   }
 }
