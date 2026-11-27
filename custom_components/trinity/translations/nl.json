@@ -1,0 +1,119 @@
+{
+  "config": {
+    "flow_title": "{naam}",
+    "step": {
+      "user": {
+        "title": "Trinity",
+        "description": "Voegt Trinity toe aan Home Assistant. Tablets met de Trinity-app die bij deze Home Assistant zijn ingelogd, melden zich daarna vanzelf en verschijnen bij Ontdekt."
+      },
+      "bevestig": {
+        "title": "{naam} koppelen",
+        "description": "Vul de koppelcode in die op de tablet staat (Instellingen › Geavanceerd › Integratie, of in de melding).",
+        "data": {
+          "code": "Koppelcode"
+        },
+        "data_description": {
+          "code": "Zes cijfers, bijvoorbeeld 483 921."
+        }
+      }
+    },
+    "error": {
+      "code_onjuist": "Die code klopt niet. Kijk nog eens op de tablet.",
+      "tablet_weg": "De tablet is niet meer verbonden. Open Trinity op de tablet en probeer het opnieuw."
+    },
+    "abort": {
+      "already_configured": "Deze tablet (of Trinity zelf) is al toegevoegd."
+    }
+  },
+  "entity": {
+    "switch": {
+      "scherm": {
+        "name": "Scherm"
+      }
+    },
+    "number": {
+      "helderheid": {
+        "name": "Helderheid"
+      }
+    },
+    "select": {
+      "pagina": {
+        "name": "Pagina"
+      }
+    },
+    "binary_sensor": {
+      "laden": {
+        "name": "Laden"
+      }
+    },
+    "sensor": {
+      "rol": {
+        "name": "Rol",
+        "state": {
+          "kiosk": "Wandpaneel",
+          "achtergrond": "Achtergrond",
+          "smartspeaker": "Smartspeaker"
+        }
+      },
+      "lux": {
+        "name": "Lichtsterkte"
+      },
+      "batterij": {
+        "name": "Batterij"
+      },
+      "android": {
+        "name": "Android-versie"
+      },
+      "beveiligingspatch": {
+        "name": "Beveiligingspatch"
+      },
+      "opgestart": {
+        "name": "Laatste herstart"
+      },
+      "app_versie": {
+        "name": "App-versie"
+      }
+    }
+  },
+  "services": {
+    "toon_pagina": {
+      "name": "Toon pagina",
+      "description": "Toont een pagina op een Trinity-tablet; de rotatie gaat daarna vanaf die pagina verder.",
+      "fields": {
+        "tablet": {
+          "name": "Tablet",
+          "description": "De Trinity-tablet."
+        },
+        "pagina": {
+          "name": "Pagina",
+          "description": "Naam of id van de pagina, zoals in de Trinity-app."
+        }
+      }
+    },
+    "herlaad_pagina": {
+      "name": "Herlaad pagina",
+      "description": "Laadt een pagina op een Trinity-tablet opnieuw.",
+      "fields": {
+        "tablet": {
+          "name": "Tablet",
+          "description": "De Trinity-tablet."
+        },
+        "pagina": {
+          "name": "Pagina",
+          "description": "Naam of id van de pagina; leeg voor de pagina die nu in beeld is."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "niet_verbonden": {
+      "message": "{naam} is nu niet verbonden met Home Assistant."
+    },
+    "onbekende_tablet": {
+      "message": "Dat apparaat is geen Trinity-tablet."
+    },
+    "onbekende_pagina": {
+      "message": "{naam} heeft geen pagina \"{pagina}\"."
+    }
+  }
+}
