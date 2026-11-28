@@ -6,7 +6,7 @@ import asyncio
 from dataclasses import dataclass, field
 import secrets
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components import websocket_api
 from homeassistant.config_entries import SOURCE_IGNORE, ConfigEntry
@@ -14,6 +14,9 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN, SIGNAAL_TABLET
+
+if TYPE_CHECKING:
+    from .releases import Releases
 
 
 @dataclass
@@ -102,6 +105,8 @@ class Tablets:
     def __init__(self, hass: HomeAssistant) -> None:
         self._hass = hass
         self._tablets: dict[str, Tablet] = {}
+        # Nieuwe versies van de app; alleen als er een GitHub-token in de opties staat.
+        self.releases: Releases | None = None
 
     def get(self, tablet_id: str) -> Tablet | None:
         return self._tablets.get(tablet_id)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 
 import pytest
 
@@ -315,3 +316,110 @@ async def test_camera_stream_en_foto(hass: HomeAssistant, hass_ws_client) -> Non
     await _staat(client, 6, {**STAAT, "camera": {"aan": False, "actief": False, "beweging": False}})
     await hass.async_block_till_done()
     assert hass.states.get(cam).state == "unavailable"
+
+
+# ── Updates van de app ─────────────────────────────────────────────────────
+
+GITHUB = "https://api.github.com/repos/rsatoer/trinity-app"
+APK = b"PK\x03\x04 nep-apk voor de test"
+
+
+def _hub_entry(hass: HomeAssistant):
+    return next(e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get("soort") == "hub")
+
+
+async def test_opties_token(hass: HomeAssistant, aioclient_mock) -> None:
+    await _hub(hass)
+    hub = _hub_entry(hass)
+
+    aioclient_mock.get(GITHUB, status=401)
+    result = await hass.config_entries.options.async_init(hub.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"github_token": "fout"})
+    assert result["errors"] == {"base": "invalid_auth"}
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(GITHUB, status=404)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"github_token": "zonder-repo"})
+    assert result["errors"] == {"base": "geen_toegang"}
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(GITHUB, json={"full_name": "rsatoer/trinity-app"})
+    aioclient_mock.get(f"{GITHUB}/releases/latest", status=404)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"github_token": " goed "})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done()
+    assert hub.options == {"github_token": "goed"}
+
+    # Leeg: updates via HA weer uit.
+    result = await hass.config_entries.options.async_init(hub.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"github_token": ""})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done()
+    assert hub.options == {}
+
+
+async def test_update_naar_tablet(
+    hass: HomeAssistant, hass_ws_client, hass_client, hass_client_no_auth, aioclient_mock, tmp_path
+) -> None:
+    hass.config.config_dir = str(tmp_path)
+    aioclient_mock.get(
+        f"{GITHUB}/releases/latest",
+        json={
+            "tag_name": "v0.0.45",
+            "name": "Trinity 0.0.45",
+            "body": "Updates via Home Assistant",
+            "html_url": "https://github.com/rsatoer/trinity-app/releases/tag/v0.0.45",
+            "assets": [{"name": "trinity-test-45.apk", "url": f"{GITHUB}/releases/assets/7"}],
+        },
+    )
+    aioclient_mock.get(f"{GITHUB}/releases/assets/7", status=302, headers={"Location": "https://objecten.example/apk"})
+    aioclient_mock.get("https://objecten.example/apk", content=APK)
+
+    client, _ = await _koppel(hass, hass_ws_client)
+    await _staat(client, 2, STAAT)
+    await hass.async_block_till_done()
+    upd = _entity(hass, "update", "app")
+    # Zonder token geen updates.
+    assert hass.states.get(upd).state == "unavailable"
+
+    hass.config_entries.async_update_entry(_hub_entry(hass), options={"github_token": "goed"})
+    await hass.async_block_till_done()
+    toestand = hass.states.get(upd)
+    assert toestand.state == "on"
+    assert toestand.attributes["installed_version"] == "0.0.30-test"
+    assert toestand.attributes["latest_version"] == "0.0.45"
+
+    await hass.services.async_call("update", "install", {"entity_id": upd}, blocking=True)
+    event = (await client.receive_json())["event"]
+    assert event == {
+        "opdracht": "update",
+        "versie": "0.0.45",
+        "pad": "/api/trinity/apk/trinity-0.0.45.apk",
+        "sha256": hashlib.sha256(APK).hexdigest(),
+    }
+    # Het token ging niet mee naar het tijdelijke downloadadres.
+    download = next(c for c in aioclient_mock.mock_calls if str(c[1]) == "https://objecten.example/apk")
+    assert "Authorization" not in (download[3] or {})
+
+    # De tablet haalt de APK op met zijn eigen inlog; zonder inlog of met een rare naam niet.
+    http = await hass_client()
+    antwoord = await http.get(event["pad"])
+    assert antwoord.status == 200
+    assert await antwoord.read() == APK
+    assert (await (await hass_client_no_auth()).get(event["pad"])).status == 401
+    assert (await http.get("/api/trinity/apk/secrets.yaml")).status == 404
+
+    # Voortgang van de tablet.
+    await _staat(client, 3, {**STAAT, "update": {"fase": "downloaden", "versie": "0.0.45", "voortgang": 40}})
+    await hass.async_block_till_done()
+    toestand = hass.states.get(upd)
+    assert toestand.attributes["in_progress"] is True
+    assert toestand.attributes["update_percentage"] == 40
+
+    # Klaar: de tablet meldt de nieuwe versie.
+    await _staat(client, 4, {**STAAT, "systeem": {**STAAT["systeem"], "app_versie": "0.0.45-test"}})
+    await hass.async_block_till_done()
+    toestand = hass.states.get(upd)
+    assert toestand.state == "off"
+    assert toestand.attributes["in_progress"] is False

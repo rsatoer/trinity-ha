@@ -51,6 +51,11 @@
           "on": "mdi:video-wireless"
         }
       }
+    },
+    "update": {
+      "app": {
+        "default": "mdi:tablet-cellphone"
+      }
     }
   },
   "services": {
