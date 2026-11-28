@@ -6,6 +6,7 @@
   ],
   "config_flow": true,
   "dependencies": [
+    "http",
     "websocket_api"
   ],
   "documentation": "https://github.com/rsatoer/trinity-ha",
@@ -13,5 +14,5 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/rsatoer/trinity-ha/issues",
   "requirements": [],
-  "version": "0.3.0"
+  "version": "0.4.0"
 }

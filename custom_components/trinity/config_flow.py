@@ -8,10 +8,24 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.core import callback
+from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
 from homeassistant.helpers.typing import DiscoveryInfoType
 
-from .const import CONF_CODE, CONF_NAAM, CONF_TABLET_ID, DOMAIN, HUB_ID, SOORT, SOORT_HUB, SOORT_TABLET
+from .const import (
+    APP_REPO,
+    CONF_CODE,
+    CONF_GITHUB_TOKEN,
+    CONF_NAAM,
+    CONF_TABLET_ID,
+    DOMAIN,
+    HUB_ID,
+    SOORT,
+    SOORT_HUB,
+    SOORT_TABLET,
+)
+from .releases import controleer_token
 from .tablets import Tablets
 
 
@@ -23,6 +37,17 @@ class TrinityConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._tablet_id: str | None = None
         self._naam: str | None = None
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        return TrinityOpties()
+
+    @classmethod
+    @callback
+    def async_supports_options_flow(cls, config_entry: ConfigEntry) -> bool:
+        """Alleen de integratie zelf (de hub) heeft opties; een tablet niet."""
+        return config_entry.data.get(SOORT) == SOORT_HUB
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """De integratie toevoegen: daarna kunnen tablets zich melden."""
@@ -64,4 +89,34 @@ class TrinityConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({vol.Required(CONF_CODE): str}),
             errors=errors,
             description_placeholders={"naam": self._naam or ""},
+        )
+
+
+class TrinityOpties(OptionsFlow):
+    """Opties van de integratie: het GitHub-token voor updates van de app."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            token = str(user_input.get(CONF_GITHUB_TOKEN) or "").strip()
+            if token:
+                fout = await controleer_token(self.hass, token)
+                if fout:
+                    errors["base"] = fout
+            if not errors:
+                # Leeg laten haalt het token weg: dan geen updates via HA.
+                return self.async_create_entry(data={CONF_GITHUB_TOKEN: token} if token else {})
+        huidig = self.config_entry.options.get(CONF_GITHUB_TOKEN, "")
+        schema = vol.Schema(
+            {
+                vol.Optional(CONF_GITHUB_TOKEN, description={"suggested_value": huidig}): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.PASSWORD)
+                )
+            }
+        )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"repo": APP_REPO},
         )

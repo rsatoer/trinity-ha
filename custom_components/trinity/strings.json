@@ -96,6 +96,11 @@
       "camera": {
         "name": "Camera"
       }
+    },
+    "update": {
+      "app": {
+        "name": "Trinity app"
+      }
     }
   },
   "services": {
@@ -137,6 +142,25 @@
     },
     "onbekende_pagina": {
       "message": "{naam} has no page \"{pagina}\"."
+    },
+    "geen_update": {
+      "message": "No new version is known. Is there a GitHub token in the Trinity options?"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "App updates",
+        "description": "With a GitHub token, Home Assistant can fetch new versions of the Trinity app and install them on the tablets. Create a fine-grained token on github.com (Settings › Developer settings › Personal access tokens) with only the repository {repo} and the permission Contents: Read-only. Leave the field empty to turn off updates through Home Assistant.",
+        "data": {
+          "github_token": "GitHub token"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "GitHub does not recognise this token. Has it expired or was it copied incorrectly?",
+      "geen_toegang": "This token cannot access {repo}. Give it access to that repository with Contents: Read-only.",
+      "cannot_connect": "GitHub cannot be reached. Try again later."
     }
   }
 }
